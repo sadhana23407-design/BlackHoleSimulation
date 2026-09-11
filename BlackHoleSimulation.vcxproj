@@ -70,6 +70,14 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>C:\Users\chinmay\OneDrive\Desktop\black hole sim\libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\chinmay\OneDrive\Desktop\black hole sim\libraries\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>C:\Users\chinmay\OneDrive\Desktop\black hole sim\libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\chinmay\OneDrive\Desktop\black hole sim\libraries\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -77,10 +85,12 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir);C:\Users\chinmay\OneDrive\Desktop\black hole sim\libraries\glm;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
@@ -111,11 +121,12 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);C:\Users\chinmay\OneDrive\Desktop\black hole sim\libraries\glm;$(ProjectDir)\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <EnableSegmentHeap>true</EnableSegmentHeap>
@@ -140,15 +151,6 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="include\BlackHole.h" />
-    <Text Include="include\controls.h.txt" />
-    <Text Include="include\parrticle.h.txt" />
-    <Text Include="include\physics.h.txt" />
-    <Text Include="include\Renderer.h" />
-    <Text Include="include\Shader.h" />
-    <Text Include="include\simulation.h.txt" />
-    <Text Include="include\skybox.h.txt" />
-    <Text Include="include\starfield.h.txt" />
     <Text Include="shaders\blackhole.frag.glsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </Text>
@@ -170,22 +172,16 @@
     <ClCompile Include="AccretionDisk.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="glad.c" />
     <ClCompile Include="src\BlackHole.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <Text Include="src\camera.cpp.txt" />
-    <Text Include="src\control.cpp.txt" />
-    <Text Include="src\particle.cpp.txt" />
-    <Text Include="src\physics.cpp.txt" />
     <ClCompile Include="src\Renderer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="src\Shader.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <Text Include="src\simulation.cpp.txt" />
-    <Text Include="src\skybox.cpp.txt" />
-    <Text Include="src\starfield.cpp.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Applications.cpp" />
@@ -196,6 +192,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Applications.h" />
+    <ClInclude Include="E:\Downloads\BlackHole.h" />
+    <ClInclude Include="E:\Downloads\Renderer.h" />
+    <ClInclude Include="E:\Downloads\Shader.h" />
+    <ClInclude Include="libraries\include\glad\glad.h" />
+    <ClInclude Include="libraries\include\GLFW\glfw3.h" />
+    <ClInclude Include="libraries\include\GLFW\glfw3native.h" />
+    <ClInclude Include="libraries\include\KHR\khrplatform.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="fragment.glsl">

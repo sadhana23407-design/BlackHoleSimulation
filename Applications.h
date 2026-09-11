@@ -39,7 +39,7 @@ private:
     bool firstMouse = true;
 
     // Simulation Parameters
-    float blackHoleMass = 1.0f;
+    float blackHoleMass = 2.5f;
 
     // Screen Quad OpenGL Handles
     unsigned int quadVAO = 0;

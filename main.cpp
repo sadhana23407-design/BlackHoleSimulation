@@ -1,5 +1,6 @@
 #include "Applications.h"
 
+//black hole
 int main()
 {
     Applications app;

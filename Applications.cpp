@@ -33,7 +33,7 @@ bool Applications::Initialize() {
     glfwSetCursorPosCallback(window, MouseCallback);
     glfwSetScrollCallback(window, ScrollCallback);
     glfwSetKeyCallback(window, KeyCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD\n";
@@ -43,7 +43,7 @@ bool Applications::Initialize() {
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
     // Load and compile shaders from GLSL files
-    shader = new Shader("shaders/vertex.glsl", "shaders/fragment.glsl");
+    shader = new Shader("blackhole.vert.glsl", "fragment.glsl");
 
     SetupScreenQuad();
     UpdateCameraVectors();

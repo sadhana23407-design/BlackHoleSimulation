@@ -72,7 +72,8 @@ vec3 getStarfield(vec3 rayDir) {
 void main() {
     vec2 st = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
 
-    vec3 rayDir = normalize(st.x * u_camRight + st.y * u_camUp + 1.2 * u_camForward);
+    // Standard pinhole camera ray direction
+    vec3 rayDir = normalize(st.x * u_camRight + st.y * u_camUp + 1.5 * u_camForward);
     vec3 rayPos = u_camPos;
 
     float Rs = 2.0 * u_mass;
@@ -81,86 +82,76 @@ void main() {
     float alphaAccum = 0.0;
     bool hitEventHorizon = false;
 
-   for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 300; i++) {
         float r = length(rayPos);
 
-        if (r < 1.0 * Rs) {
+        // Shadow boundary (Photon sphere / Event horizon interaction)
+        if (r < Rs) {
             hitEventHorizon = true;
             break;
         }
 
-        if (r > 800.0) break;
+        if (r > 100.0) break;
 
-        // ADD THIS LINE HERE BEFORE nextPos:
-        float stepSize = 0.02 + 0.03 * smoothstep(Rs, 10.0 * Rs, r);
+        // Dynamic step size scaling to prevent ray tunneling
+        float stepSize = 0.05 + 0.05 * (r / Rs);
 
         vec3 nextPos = rayPos + rayDir * stepSize;
 
-        // Equatorial Plane Crossing
+        // Equatorial Plane Crossing (Accretion Disk)
         if ((rayPos.y * nextPos.y) < 0.0) {
             float t = -rayPos.y / rayDir.y;
             vec3 hitP = rayPos + rayDir * t;
             float hitDist = length(hitP);
 
-            if (hitDist > 1.2 * Rs && hitDist < 12.0 * Rs) {
-                float normDist = (hitDist - 1.2 * Rs) / (10.8 * Rs);
+            if (hitDist > 1.5 * Rs && hitDist < 10.0 * Rs) {
+                float normDist = (hitDist - 1.5 * Rs) / (8.5 * Rs);
 
-                // Polar coordinates for swirling noise pattern
                 float angle = atan(hitP.z, hitP.x);
-                vec2 noiseUV = vec2(hitDist * 0.8 - u_time * 0.15, angle * 2.0 + hitDist * 0.3);
+                vec2 noiseUV = vec2(hitDist * 0.5 - u_time * 0.1, angle * 2.0);
                 
-                // Spiral plasma turbulence noise
                 float plasmaNoise = fbm(noiseUV * 2.0) * 0.5 + 0.5;
-                plasmaNoise = pow(plasmaNoise, 1.2);
+                float intensity = exp(-normDist * 2.5) * (0.2 + 0.8 * plasmaNoise);
 
-                // Radial falloff exponential profile
-                float intensity = exp(-normDist * 3.2) * (0.3 + 0.7 * plasmaNoise);
-
-                // Asymmetric Doppler Beaming (left side bright, right side dim)
-                vec3 velDir = normalize(vec3(-hitP.z, 0.0, hitP.x));
-                float doppler = 0.75 + 0.65 * dot(velDir, -rayDir);
-                doppler = clamp(doppler, 0.2, 2.2);
-
-                // Precise Color Palette: Brilliant Core White -> Fiery Amber -> Warm Orange -> Deep Red
-                vec3 coreWhite   = vec3(4.0, 3.6, 2.8); 
-                vec3 hotGold     = vec3(2.5, 1.4, 0.3);
-                vec3 fieryOrange = vec3(1.4, 0.45, 0.06);
-                vec3 deepRed     = vec3(0.35, 0.04, 0.008);
+                // Red and Orange Gradient Definition
+                vec3 brightOrange = vec3(3.5, 1.2, 0.15); // Hot inner rim
+                vec3 fieryRed     = vec3(2.0, 0.2, 0.02); // Mid disk
+                vec3 deepCrimson  = vec3(0.6, 0.02, 0.005); // Outer rim
 
                 vec3 colorGradient;
-                if (normDist < 0.10) {
-                    colorGradient = mix(coreWhite, hotGold, normDist / 0.10);
-                } else if (normDist < 0.45) {
-                    colorGradient = mix(hotGold, fieryOrange, (normDist - 0.10) / 0.35);
+                if (normDist < 0.3) {
+                    colorGradient = mix(brightOrange, fieryRed, normDist / 0.3);
                 } else {
-                    colorGradient = mix(fieryOrange, deepRed, (normDist - 0.45) / 0.55);
+                    colorGradient = mix(fieryRed, deepCrimson, (normDist - 0.3) / 0.7);
                 }
 
-                float alphaVal = intensity * 0.55;
+                float alphaVal = clamp(intensity * 0.4, 0.0, 1.0);
 
-                diskColorAccum += (1.0 - alphaAccum) * colorGradient * doppler * alphaVal;
+                // Removed Doppler factor for uniform radial brightness
+                diskColorAccum += (1.0 - alphaAccum) * colorGradient * intensity * alphaVal;
                 alphaAccum += alphaVal;
+
+                if (alphaAccum >= 0.98) break;
             }
         }
 
-        // Relativistic Deflection
-        // Enhanced Gravitational Lensing Force
-        float lensStrength = 2.0; // Increase from 1.5 to boost bending
-        vec3 accel = -lensStrength * Rs * cross(cross(rayPos, rayDir), rayPos) / pow(r, 4.8);
+        // Relativistic geodesic ray bending
+        vec3 L = cross(rayPos, rayDir);
+        float h2 = dot(L, L);
+        vec3 accel = -1.5 * Rs * h2 * rayPos / pow(r, 5.0);
+        
         rayDir = normalize(rayDir + accel * stepSize);
         rayPos = nextPos;
     }
 
     vec3 outColor = diskColorAccum;
 
-    if (hitEventHorizon) {
-        outColor = diskColorAccum;
-    } else {
+    if (!hitEventHorizon) {
         outColor += (1.0 - alphaAccum) * getStarfield(rayDir);
     }
 
-    // Filmic Tonemapping for HDR photon ring bloom
-    outColor = vec3(1.0) - exp(-outColor * 1.35);
+    // Filmic Tonemapping
+    outColor = vec3(1.0) - exp(-outColor * 1.2);
 
     FragColor = vec4(outColor, 1.0);
 }
