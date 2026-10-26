@@ -8,6 +8,10 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath) {
     std::string vertexCode = ReadFile(vertexPath);
     std::string fragmentCode = ReadFile(fragmentPath);
 
+    if (vertexCode.empty() || fragmentCode.empty()) {
+        std::cerr << "ERROR::SHADER::EMPTY_SOURCE_CODE - Check shader file paths!\n";
+    }
+
     const char* vShaderCode = vertexCode.c_str();
     const char* fShaderCode = fragmentCode.c_str();
 
@@ -36,7 +40,10 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath) {
 }
 
 Shader::~Shader() {
-    glDeleteProgram(ID);
+    if (ID != 0) {
+        glDeleteProgram(ID);
+        ID = 0;
+    }
 }
 
 void Shader::Use() const {
@@ -45,7 +52,7 @@ void Shader::Use() const {
 
 // Utility Uniform Setters
 void Shader::setBool(const std::string& name, bool value) const {
-    glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value);
+    glUniform1i(glGetUniformLocation(ID, name.c_str()), static_cast<int>(value));
 }
 
 void Shader::setInt(const std::string& name, int value) const {
@@ -57,7 +64,7 @@ void Shader::setFloat(const std::string& name, float value) const {
 }
 
 void Shader::setVec2(const std::string& name, const glm::vec2& value) const {
-    glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+    glUniform2fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(value));
 }
 
 void Shader::setVec2(const std::string& name, float x, float y) const {
@@ -65,7 +72,7 @@ void Shader::setVec2(const std::string& name, float x, float y) const {
 }
 
 void Shader::setVec3(const std::string& name, const glm::vec3& value) const {
-    glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, &value[0]);
+    glUniform3fv(glGetUniformLocation(ID, name.c_str()), 1, glm::value_ptr(value));
 }
 
 void Shader::setVec3(const std::string& name, float x, float y, float z) const {
@@ -78,7 +85,7 @@ void Shader::setMat4(const std::string& name, const glm::mat4& mat) const {
 
 void Shader::CheckCompileErrors(unsigned int shader, const std::string& type) {
     int success;
-    char infoLog[1024];
+    char infoLog[1024] = { 0 };
 
     if (type != "PROGRAM") {
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
@@ -99,25 +106,15 @@ void Shader::CheckCompileErrors(unsigned int shader, const std::string& type) {
 }
 
 std::string Shader::ReadFile(const char* filePath) {
-    std::string code;
-    std::ifstream file;
+    std::ifstream file(filePath, std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "ERROR::SHADER::FILE_NOT_FOUND: " << filePath << std::endl;
+        return "";
+    }
 
-    // Enable badbit to catch file stream corruption, but avoid failbit EOF crash
-    file.exceptions(std::ifstream::badbit);
-    try {
-        file.open(filePath);
-        if (!file.is_open()) {
-            std::cout << "ERROR::SHADER::FILE_NOT_FOUND: " << filePath << std::endl;
-            return "";
-        }
-        std::stringstream stream;
-        stream << file.rdbuf();
-        file.close();
-        code = stream.str();
-    }
-    catch (const std::ifstream::failure& e) {
-        std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << filePath
-            << " (" << e.what() << ")" << std::endl;
-    }
-    return code;
+    std::stringstream stream;
+    stream << file.rdbuf();
+    file.close();
+
+    return stream.str();
 }

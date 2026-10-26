@@ -1,6 +1,5 @@
 #include "Applications.h"
 #include <iostream>
-#include <vector>
 
 Applications::Applications() {}
 
@@ -27,13 +26,13 @@ bool Applications::Initialize() {
 
     glfwMakeContextCurrent(window);
 
-    // Register Callbacks & Mouse Capture
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
     glfwSetCursorPosCallback(window, MouseCallback);
     glfwSetScrollCallback(window, ScrollCallback);
     glfwSetKeyCallback(window, KeyCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD\n";
@@ -42,7 +41,7 @@ bool Applications::Initialize() {
 
     glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
 
-    // Load and compile shaders from GLSL files
+    // Load Shaders
     shader = new Shader("blackhole.vert.glsl", "fragment.glsl");
 
     SetupScreenQuad();
@@ -52,21 +51,13 @@ bool Applications::Initialize() {
 }
 
 void Applications::UpdateCameraVectors() {
-    // Calculate spherical camera position orbiting black hole center (0,0,0)
-    float radYaw = glm::radians(yaw);
-    float radPitch = glm::radians(pitch);
-
-    cameraPos.x = distance * cos(radPitch) * cos(radYaw);
-    cameraPos.y = distance * sin(radPitch);
-    cameraPos.z = distance * cos(radPitch) * sin(radYaw);
-
     glm::vec3 front;
-    front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw + 180.0f));
-    front.y = -sin(glm::radians(pitch));
-    front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw + 180.0f));
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
     cameraFront = glm::normalize(front);
 
-    // 3. Recalculate up and right vectors
     glm::vec3 worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
     glm::vec3 right = glm::normalize(glm::cross(cameraFront, worldUp));
     cameraUp = glm::normalize(glm::cross(right, cameraFront));
@@ -79,15 +70,13 @@ void Applications::Run() {
         lastFrame = currentFrame;
 
         ProcessInput(window);
-        UpdateCameraVectors();
 
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Activate shader program via Shader class
         shader->Use();
 
-        // Pass uniforms via Shader utility setters
+        // Pass Core Camera & Raymarching Uniforms
         shader->setVec2("u_resolution", glm::vec2(static_cast<float>(SCR_WIDTH), static_cast<float>(SCR_HEIGHT)));
         shader->setFloat("u_time", currentFrame);
         shader->setFloat("u_mass", blackHoleMass);
@@ -99,6 +88,7 @@ void Applications::Run() {
         shader->setVec3("u_camUp", cameraUp);
         shader->setVec3("u_camRight", right);
 
+        // Draw Screen-Filling Quad
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -111,11 +101,21 @@ void Applications::ProcessInput(GLFWwindow* win) {
     if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(win, true);
 
-    // Zoom shortcuts
+    float velocity = cameraSpeed * deltaTime;
+
     if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS)
-        distance = glm::clamp(distance - 10.0f * deltaTime, 4.0f, 120.0f);
+        cameraPos += cameraFront * velocity;
     if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS)
-        distance = glm::clamp(distance + 10.0f * deltaTime, 4.0f, 120.0f);
+        cameraPos -= cameraFront * velocity;
+    if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;
+    if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * velocity;
+
+    if (glfwGetKey(win, GLFW_KEY_SPACE) == GLFW_PRESS)
+        cameraPos += glm::vec3(0.0f, 1.0f, 0.0f) * velocity;
+    if (glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        cameraPos -= glm::vec3(0.0f, 1.0f, 0.0f) * velocity;
 }
 
 void Applications::SetupScreenQuad() {
@@ -142,6 +142,8 @@ void Applications::SetupScreenQuad() {
 
 void Applications::FramebufferSizeCallback(GLFWwindow* win, int width, int height) {
     auto* app = reinterpret_cast<Applications*>(glfwGetWindowUserPointer(win));
+    if (!app) return;
+
     app->SCR_WIDTH = width;
     app->SCR_HEIGHT = height;
     glViewport(0, 0, width, height);
@@ -149,6 +151,8 @@ void Applications::FramebufferSizeCallback(GLFWwindow* win, int width, int heigh
 
 void Applications::MouseCallback(GLFWwindow* win, double xposIn, double yposIn) {
     auto* app = reinterpret_cast<Applications*>(glfwGetWindowUserPointer(win));
+    if (!app) return;
+
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
@@ -163,22 +167,28 @@ void Applications::MouseCallback(GLFWwindow* win, double xposIn, double yposIn) 
     app->lastX = xpos;
     app->lastY = ypos;
 
-    float sensitivity = 0.15f;
+    float sensitivity = 0.1f;
     app->yaw += xoffset * sensitivity;
     app->pitch += yoffset * sensitivity;
 
-    // Prevent orbital flip
-    if (app->pitch > 89.0f) app->pitch = 89.0f;
+    if (app->pitch > 89.0f)  app->pitch = 89.0f;
     if (app->pitch < -89.0f) app->pitch = -89.0f;
+
+    app->UpdateCameraVectors();
 }
 
 void Applications::ScrollCallback(GLFWwindow* win, double xoffset, double yoffset) {
     auto* app = reinterpret_cast<Applications*>(glfwGetWindowUserPointer(win));
-    app->distance -= static_cast<float>(yoffset) * 1.5f;
-    app->distance = glm::clamp(app->distance, 4.0f, 120.0f);
+    if (!app) return;
+
+    app->cameraSpeed += static_cast<float>(yoffset) * 2.5f;
+    app->cameraSpeed = glm::clamp(app->cameraSpeed, 2.0f, 150.0f);
 }
 
 void Applications::KeyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
+    auto* app = reinterpret_cast<Applications*>(glfwGetWindowUserPointer(win));
+    if (!app) return;
+
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(win, true);
 }
